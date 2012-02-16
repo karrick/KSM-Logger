@@ -5,7 +5,6 @@ Makefile.PL
 README
 ignore.txt
 lib/KSM/Logger.pm
-log/unknown.2012-02-16.log
 t/00-load.t
 t/01-defaults.t
 t/02-prepare_line.t

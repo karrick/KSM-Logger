@@ -33,6 +33,6 @@ sub restore_reformatter : Tests(teardown) {
 
 sub test_logit_returns_finished_line : Tests {
     like(info("Hello, World!"),
-	 qr/^INFO: \(pid \d+\) Hello\, World\!$/);
+	 qr/^\[\d{4}\-\d\d\-\d\d \d\d:\d\d:\d\d [A-Z]+\] \d{9,10} INFO: \(pid \d+\) Hello\, World\!\n$/);
 }
 

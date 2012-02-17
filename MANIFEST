@@ -7,6 +7,8 @@ ignore.txt
 lib/KSM/Logger.pm
 t/00-load.t
 t/01-defaults.t
+t/01-initialize-custom.t
+t/01-initialize-defaults.t
 t/02-prepare_line.t
 t/03-severity-levels.t
 t/04-log-files.t

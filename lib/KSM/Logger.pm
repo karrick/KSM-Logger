@@ -26,7 +26,7 @@ Version 0.02
 our $VERSION = '0.02';
 
 our $FILENAME_OPENED;
-our $FILENAME_TEMPLATE = "log/unknown.%F.log";
+our $FILENAME_TEMPLATE = sprintf("/tmp/%s.%%F.log", $0);
 our $LEVEL = INFO;
 our $LOG_FILEHANDLE;
 our $REFORMATTER = \&REFORMATTER;
@@ -44,8 +44,9 @@ Perhaps a little code snippet.
 
     use KSM::Logger qw(debug verbose info warning error);
 
-    KSM::Logger::filename_template("/var/log/Foo/foo.%F.log");
-    KSM::Logger::level(KSM::Logger::VERBOSE);
+    KSM::Logger::initialize({subsystem => 'my_subsystem',
+                             filename_template => "/var/log/my_program/foo.%F.log",
+                             level => KSM::Logger::VERBOSE});
     KSM::Logger::reformatter(sub {
 	my ($level,$line) = @_;
         sprintf("%s: (pid %d) %s", $level, $$, $line);
@@ -87,16 +88,39 @@ our @EXPORT_OK = (@{$EXPORT_TAGS{'all'}});
 
 =head1 SUBROUTINES/METHODS
 
+=head2 initialize
+
+Initializes logging for your application by setting the subsystem and
+the log filename template.  It also configures the logger to use the
+e3 common log format.
+
+=cut
+
+sub initialize {
+    my ($options) = @_;
+    if(defined($options->{filename_template})) {
+	KSM::Logger::filename_template($options->{filename_template});
+    }
+    if(defined($options->{level})) {
+	KSM::Logger::level($options->{level});
+    }
+    if(defined($options->{reformatter})) {
+	KSM::Logger::reformatter($options->{reformatter});
+    }
+}
+
 =head2 REFORMATTER
 
-Default line reformatter.  Prefix the log event with the severity
-level string and the process PID.
+Default line reformatter.  Prefix the log event with timestamp, the
+severity level string, and the process PID.
 
 =cut
 
 sub REFORMATTER {
     my ($level,$line) = @_;
-    sprintf("%s: (pid %d) %s", $level, $$, $line);
+    sprintf("%s %s: (pid %d) %s",
+ 	    POSIX::strftime("[%F %T %Z] %s", gmtime),
+	    $level, $$, $line);
 }
 
 =head2 level
@@ -127,7 +151,13 @@ your logs based on time.  You can place strftime codes in both the
 path and filename portion of the template.
 
 If not explicitly set, the filename template will be set to
-"log/unknown.%F.log".
+"/tmp/$0.%F.log".
+
+Note that when Logger needs to roll logs, it will use the same
+template that you gave it before.  If your program is daemonized, its
+directory may be somewhere else than where you started it.  For this
+reason, you should always give Logger an absolute path for the log
+file template.
 
 =cut
 
@@ -265,7 +295,7 @@ sub log_filehandle {
 	eval {
 	    File::Path::mkpath(File::Basename::dirname($need_file));
 	    open(my $fh, '>>', $need_file)
-		or die sprintf("unable to open log file [%s]: %s", $need_file, $!);
+		or die sprintf("unable to append [%s]: %s", $need_file, $!);
 	    if(defined($LOG_FILEHANDLE)) {
 		print $LOG_FILEHANDLE prepare_line('INFO', "Logs continued [%s]",
 						   File::Basename::basename($need_file));
@@ -278,7 +308,7 @@ sub log_filehandle {
 	if($@) {
 	    if(defined($LOG_FILEHANDLE)) {
 		# keep writting to old log file, but warn user
-		print $LOG_FILEHANDLE prepare_line('WARNING', $@);
+		print $LOG_FILEHANDLE prepare_line('WARNING', sprintf("unable to create log file: %s", $@));
 	    } else {
 		# FIXME: nowhere to write logs (hours of trouble-shooting if daemonized...)
 		die sprintf("unable to open log for writting [%s]: %s\n",

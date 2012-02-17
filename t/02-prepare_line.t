@@ -55,7 +55,7 @@ sub simple_reformatter {
 
 sub test_prepare_line_invokes_sprintf : Tests {
     like(KSM::Logger::prepare_line("INFO", "Is %s called?", "sprintf"),
-	 qr/^INFO: \(pid \d+\) Is sprintf called\?/);
+	 qr/^\[\d{4}\-\d\d\-\d\d \d\d:\d\d:\d\d [A-Z]+\] \d{9,10} INFO: \(pid \d+\) Is sprintf called\?\n/);
 }
 
 sub test_prepare_line_invokes_reformatter : Tests {

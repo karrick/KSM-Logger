@@ -62,13 +62,13 @@ sub test_prepare_line_invokes_reformatter : Tests {
     KSM::Logger::reformatter(\&simple_reformatter);
 
     is(KSM::Logger::prepare_line("DEBUG", "Now is the time"),
-       "(1999) DEBUG: Now is the time");
+       "(1999) DEBUG: Now is the time\n");
     is(KSM::Logger::prepare_line("VERBOSE", "for all good men"),
-       "(2499) VERBOSE: for all good men");
+       "(2499) VERBOSE: for all good men\n");
     is(KSM::Logger::prepare_line("INFO", "to come to the"),
-       "(2999) INFO: to come to the");
+       "(2999) INFO: to come to the\n");
     is(KSM::Logger::prepare_line("WARNING", "of their"),
-       "(5999) WARNING: of their");
+       "(5999) WARNING: of their\n");
     is(KSM::Logger::prepare_line("ERROR", "country"),
-       "(8999) ERROR: country");
+       "(8999) ERROR: country\n");
 }

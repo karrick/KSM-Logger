@@ -2,3 +2,6 @@
 .gitignore
 KSM-Logger.*
 log
+blib
+Makefile
+pm_to_blib

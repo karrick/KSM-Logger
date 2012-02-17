@@ -19,11 +19,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our $FILENAME_OPENED;
 our $FILENAME_TEMPLATE = "log/unknown.%F.log";
@@ -168,7 +168,8 @@ sub prepare_line {
     my $level = shift;
     my $template = shift;
     # NOTE: remaining args are for sprintf
-    &{$REFORMATTER}($level, sprintf($template, @_));
+    chomp(my $line = &{$REFORMATTER}($level, sprintf($template, @_)));
+    sprintf("%s\n", $line);
 }
 
 =head2 debug
@@ -264,7 +265,7 @@ sub log_filehandle {
 	eval {
 	    File::Path::mkpath(File::Basename::dirname($need_file));
 	    open(my $fh, '>>', $need_file)
-		or die sprintf("unable to open logfile: %s", $!);
+		or die sprintf("unable to open log file [%s]: %s", $need_file, $!);
 	    if(defined($LOG_FILEHANDLE)) {
 		print $LOG_FILEHANDLE prepare_line('INFO', "Logs continued [%s]",
 						   File::Basename::basename($need_file));
@@ -277,11 +278,9 @@ sub log_filehandle {
 	if($@) {
 	    if(defined($LOG_FILEHANDLE)) {
 		# keep writting to old log file, but warn user
-		print $LOG_FILEHANDLE prepare_line('WARNING',
-						   "Could not open new log file [%s]: %s",
-						   $need_file, $!);
+		print $LOG_FILEHANDLE prepare_line('WARNING', $@);
 	    } else {
-		# nowhere to write logs
+		# FIXME: nowhere to write logs (hours of trouble-shooting if daemonized...)
 		die sprintf("unable to open log for writting [%s]: %s\n",
 			    $need_file, $!);
 	    }
@@ -302,11 +301,8 @@ re-open new logs when necessary.
 =cut
 
 sub logit {
-    chomp(my ($line) = @_);
-    $line = sprintf("%s\n", $line);
-
+    my ($line) = @_;
     my $fh = log_filehandle(filename_template());
-
     print $fh $line;
     $line;
 }

@@ -13,8 +13,6 @@ WriteMakefile(
     PL_FILES            => {},
     BUILD_REQUIRES => {
 	'Test::Class' => 0,
-	# 'Test::MockObject' => 0,
-	# 'Test::MockObject::Extends' => 0,
         'Test::More' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
@@ -23,10 +21,10 @@ WriteMakefile(
 
 sub MY::postamble {
     my $postamble = <<'MAKE_FRAG';
-.PHONY: rpm rpm_test critic
+.PHONY: rpm
 
 rpm:	test dist
-	cpan2rpm --license='Commercial' --no-sign $(DISTVNAME).tar.$(SUFFIX)
+	cpan2rpm --no-sign $(DISTVNAME).tar.$(SUFFIX)
 MAKE_FRAG
 
     return $postamble;

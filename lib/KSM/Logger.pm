@@ -19,11 +19,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 our $FILENAME_OPENED;
 our $FILENAME_TEMPLATE = sprintf("/tmp/%s.%%F.log", $0);
@@ -302,7 +302,7 @@ sub log_filehandle {
 		close $LOG_FILEHANDLE;
 	    }
 	    $LOG_FILEHANDLE = $fh;
-	    $LOG_FILEHANDLE->autoflush(1);
+	    select((select($LOG_FILEHANDLE), $| = 1)[0]);
 	    $FILENAME_OPENED = $need_file;
 	};
 	if($@) {

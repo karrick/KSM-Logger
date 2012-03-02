@@ -3,6 +3,7 @@
 use utf8;
 use strict;
 use warnings;
+use Carp;
 
 use Test::More;
 use Test::Class;
@@ -18,12 +19,9 @@ use KSM::Logger qw(:all);
 
 sub test_initialize_accepts_custom_options : Tests {
     KSM::Logger::initialize({filename_template => "log/foobarbaz/foo.%F.log",
-			     level => KSM::Logger::WARNING,
-			     subsystem => "foobarbaz"});
+			     level => KSM::Logger::WARNING});
     is(KSM::Logger::filename_template(), "log/foobarbaz/foo.%F.log");
     is(KSM::Logger::level(), KSM::Logger::WARNING);
-    like(KSM::Logger::prepare_line('DEBUG', 'What is my subsystem?'),
-	 qr//);
 }
 
 sub test_dies_when_unable_to_open_log_file : Tests {

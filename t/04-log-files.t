@@ -33,5 +33,5 @@ sub restore_reformatter : Tests(teardown) {
 
 sub test_log_filename_formats_argument_with_strftime : Tests {
     like(KSM::Logger::log_filename(KSM::Logger::filename_template()),
-	 qr/^\/tmp\/t\/04\-log\-files\.t\.\d{4}\-\d\d\-\d\d\.log$/);
+	 qr/^\/tmp\/04\-log\-files\.t\.\d{4}\-\d\d\-\d\d\.log$/);
 }

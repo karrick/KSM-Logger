@@ -19,14 +19,14 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 0.03
+Version 0.05
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.05';
 
 our $FILENAME_OPENED;
-our $FILENAME_TEMPLATE = sprintf("/tmp/%s.%%F.log", $0);
+our $FILENAME_TEMPLATE = sprintf("/tmp/%s.%%F.log", File::Basename::basename($0));
 our $LEVEL = INFO;
 our $LOG_FILEHANDLE;
 our $REFORMATTER = \&REFORMATTER;
@@ -44,13 +44,12 @@ Perhaps a little code snippet.
 
     use KSM::Logger qw(debug verbose info warning error);
 
-    KSM::Logger::initialize({subsystem => 'my_subsystem',
-                             filename_template => "/var/log/my_program/foo.%F.log",
-                             level => KSM::Logger::VERBOSE});
-    KSM::Logger::reformatter(sub {
-	my ($level,$line) = @_;
-        sprintf("%s: (pid %d) %s", $level, $$, $line);
-    });
+    KSM::Logger::initialize({filename_template => "/var/log/my_program/foo.%F.log",
+                             level => KSM::Logger::VERBOSE,
+                             reformatter => sub {
+                               my ($level,$line) = @_;
+                               sprintf("%s: (pid %d) %s", $level, $$, $line);
+                            }});
 
     ...
 
@@ -90,29 +89,36 @@ our @EXPORT_OK = (@{$EXPORT_TAGS{'all'}});
 
 =head2 initialize
 
-Initializes logging for your application by setting the subsystem and
-the log filename template.  It also configures the logger to use the
-e3 common log format.
+Initializes logging for your application by setting the filename
+template, log level, and the log event reformatter function.
+
+You may leave any or all options 
 
 =cut
 
 sub initialize {
     my ($options) = @_;
-    if(defined($options->{filename_template})) {
-	KSM::Logger::filename_template($options->{filename_template});
-    }
-    if(defined($options->{level})) {
-	KSM::Logger::level($options->{level});
-    }
-    if(defined($options->{reformatter})) {
-	KSM::Logger::reformatter($options->{reformatter});
+    if(defined($options)) {
+	if(ref($options) eq 'HASH') {
+	    if(defined($options->{filename_template})) {
+		KSM::Logger::filename_template($options->{filename_template});
+	    }
+	    if(defined($options->{level})) {
+		KSM::Logger::level($options->{level});
+	    }
+	    if(defined($options->{reformatter})) {
+		KSM::Logger::reformatter($options->{reformatter});
+	    }
+	} else {
+	    croak("ought to pass in an option hash, or nothing");
+	}
     }
 }
 
 =head2 REFORMATTER
 
-Default line reformatter.  Prefix the log event with timestamp, the
-severity level string, and the process PID.
+Default log event reformatter.  Prefix the log event with timestamp,
+the severity level string, and the process PID.
 
 =cut
 
@@ -151,7 +157,7 @@ your logs based on time.  You can place strftime codes in both the
 path and filename portion of the template.
 
 If not explicitly set, the filename template will be set to
-"/tmp/$0.%F.log".
+"/tmp/$0.%F.log", where $0 is the basename of your program.
 
 Note that when Logger needs to roll logs, it will use the same
 template that you gave it before.  If your program is daemonized, its
@@ -186,83 +192,84 @@ sub reformatter {
     $REFORMATTER;
 }
 
-=head2 prepare_line
-
-Prepare a single log event for output by invoking sprintf on the
-remaining arguments, and then invoking the optionally user-supplied
-reformatter on the result from sprintf formatting.
-
-=cut
-
-sub prepare_line {
-    my $level = shift;
-    my $template = shift;
-    # NOTE: remaining args are for sprintf
-    chomp(my $line = &{$REFORMATTER}($level, sprintf($template, @_)));
-    sprintf("%s\n", $line);
-}
-
 =head2 debug
 
 Outputs a log event if the log level is DEBUG.
 
+Always returns the log event as formatted by sprintf, but not the
+REFORMATTER function.
+
 =cut
 
 sub debug {
-    if($LEVEL == DEBUG) {
-	unshift(@_, 'DEBUG');
-	logit(prepare_line(@_));
-    }
+    my $template = shift;
+    my $line = eval {sprintf($template, @_)};
+    croak($@) if($@);
+    ($LEVEL == DEBUG ? logit('DEBUG', $line) : $line);
 }
 
 =head2 verbose
 
 Outputs a log event if the log level is VERBOSE or above.
 
+Always returns the log event as formatted by sprintf, but not the
+REFORMATTER function.
+
 =cut
 
 sub verbose {
-    if($LEVEL >= VERBOSE) {
-	unshift(@_, 'VERBOSE');
-	logit(prepare_line(@_));
-    }
+    my $template = shift;
+    my $line = eval {sprintf($template, @_)};
+    croak($@) if($@);
+    ($LEVEL >= VERBOSE ? logit('VERBOSE', $line) : $line);
 }
 
 =head2 info
 
 Outputs a log event if the log level is INFO or above.
 
+Always returns the log event as formatted by sprintf, but not the
+REFORMATTER function.
+
 =cut
 
 sub info {
-    if($LEVEL >= INFO) {
-	unshift(@_, 'INFO');
-	logit(prepare_line(@_));
-    }
+    my $template = shift;
+    my $line = eval {sprintf($template, @_)};
+    croak($@) if($@);
+    ($LEVEL >= INFO ? logit('INFO', $line) : $line);
 }
 
 =head2 warning
 
 Outputs a log event if the log level is WARNING or above.
 
+Always returns the log event as formatted by sprintf, but not the
+REFORMATTER function.
+
 =cut
 
 sub warning {
-    if($LEVEL >= WARNING) {
-	unshift(@_, 'WARNING');
-	logit(prepare_line(@_));
-    }
+    my $template = shift;
+    my $line = eval {sprintf($template, @_)};
+    croak($@) if($@);
+    ($LEVEL >= WARNING ? logit('WARNING', $line) : $line);
 }
 
 =head2 error
 
 Outputs a log event regardless of the log level.
 
+Always returns the log event as formatted by sprintf, but not the
+REFORMATTER function.
+
 =cut
 
 sub error {
-    unshift(@_, 'ERROR');
-    logit(prepare_line(@_));
+    my $template = shift;
+    my $line = eval {sprintf($template, @_)};
+    croak($@) if($@);
+    logit('ERROR', $line);
 }
 
 =head2 log_filename
@@ -295,76 +302,51 @@ sub log_filehandle {
 	eval {
 	    File::Path::mkpath(File::Basename::dirname($need_file));
 	    open(my $fh, '>>', $need_file)
-		or die sprintf("unable to append [%s]: %s", $need_file, $!);
+		or die sprintf('unable to append [%s]: %s', $need_file, $!);
 	    if(defined($LOG_FILEHANDLE)) {
-		print $LOG_FILEHANDLE prepare_line('INFO', "Logs continued [%s]",
-						   File::Basename::basename($need_file));
+		printf $LOG_FILEHANDLE sprintf("INFO: logs continued [%s]\n", 
+					       File::Basename::basename($need_file));
 		close $LOG_FILEHANDLE;
 	    }
 	    $LOG_FILEHANDLE = $fh;
-	    select((select($LOG_FILEHANDLE), $| = 1)[0]);
+	    select((select($LOG_FILEHANDLE), $| = 1)[0]); # autoflush
 	    $FILENAME_OPENED = $need_file;
 	};
 	if($@) {
 	    if(defined($LOG_FILEHANDLE)) {
 		# keep writting to old log file, but warn user
-		print $LOG_FILEHANDLE prepare_line('WARNING', sprintf("unable to create log file: %s", $@));
+		printf $LOG_FILEHANDLE sprintf("WARNING: unable to create log file: %s\n",
+					       $@);
 	    } else {
 		# FIXME: nowhere to write logs (hours of trouble-shooting if daemonized...)
-		die sprintf("unable to open log for writting [%s]: %s\n",
-			    $need_file, $!);
+		die sprintf("unable to open log for writting [%s]: %s\n", $need_file, $@);
 	    }
 	}
-	setup_die_handler();
-	setup_warn_handler();
     }
     $LOG_FILEHANDLE;
 }
 
 =head2 logit
 
-Internal function that ensures Logger is sending data to the correct
-file, and writes the actual log message to that file.  If there are
-date or time codes from strftime(3) in the template, it will close and
-re-open new logs when necessary.
+Internal function that invokes the user's reformatter with the log
+event, then writes the log to the correct file.
+
+It trims all whitespace from both ends of the string returned by the
+REFORMATTER function.
+
+If there are date or time codes from strftime(3) in the filename
+template, it will close and re-open new logs when necessary.
 
 =cut
 
 sub logit {
-    my ($line) = @_;
+    my ($level,$line) = @_;
+    my $reformatted = &{$REFORMATTER}($level, $line);
+    $reformatted =~ s/^\s+//g;
+    $reformatted =~ s/\s+$//g;
     my $fh = log_filehandle(filename_template());
-    print $fh $line;
+    printf $fh sprintf("%s\n", $reformatted);
     $line;
-}
-
-=head2 setup_die_handler
-
-Internal function called to setup handler for Perl pseudo-signal
-__DIE__.
-
-=cut
-
-sub setup_die_handler {
-    $SIG{__DIE__} = sub {
-	chomp(my $msg = shift);
-	error($msg);
-	return 1;
-    };
-}
-
-=head2 setup_warn_handler
-
-Internal function called to setup handler for Perl pseudo-signal
-__WARN__.
-
-=cut
-
-sub setup_warn_handler {
-    $SIG{__WARN__} = sub {
-	chomp(my $msg = shift);
-	warning($msg);
-	return 1;
-    };
 }
 
 =head1 AUTHOR
@@ -378,15 +360,6 @@ rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=KSM-Logger>.  I will
 be notified, and then you'll automatically be notified of progress on
 your bug as I make changes.
-
-The Logger sets up signal handlers for the pseudo-signals __DIE__ and
-__WARN__ signals.  This occurs when the first log entry is written, so
-warn() and die() will not be automatically logged before the first
-even is written to the log file.  This is normally not a problem
-because many program, and most daemon programs, print out some line to
-indicate program initialization and commencement.
-
-    info("Initializing Foobar");
 
 
 =head1 SUPPORT

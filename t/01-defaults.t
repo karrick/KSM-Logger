@@ -59,6 +59,5 @@ sub test_default_reformatter_changable : Tests {
 
     my $input = "This is a line of input.";
     
-    is(&{$function}($input),
-       &{$reformatter}($input));
+    is(&{$function}($input), &{$reformatter}($input));
 }

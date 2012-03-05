@@ -1,11 +1,13 @@
 package KSM::Logger;
 
-use warnings;
+use utf8;
 use strict;
+use warnings;
+
 use Carp;
-use File::Basename;
-use File::Path;
-use POSIX;
+use File::Basename ();
+use File::Path ();
+use POSIX ();
 
 use constant ERROR => 0;
 use constant WARNING => ERROR + 1;
@@ -19,17 +21,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 0.05
+Version 1.00
 
 =cut
 
-our $VERSION = '0.05';
-
-our $FILENAME_OPENED;
-our $FILENAME_TEMPLATE = sprintf("/tmp/%s.%%F.log", File::Basename::basename($0));
-our $LEVEL = INFO;
-our $LOG_FILEHANDLE;
-our $REFORMATTER = \&REFORMATTER;
+our $VERSION = '1.00';
 
 =head1 SYNOPSIS
 
@@ -42,7 +38,7 @@ reformatter function you provide for each log event.
 
 Perhaps a little code snippet.
 
-    use KSM::Logger qw(debug verbose info warning error);
+    use KSM::Logger qw(:all);
 
     KSM::Logger::initialize({filename_template => "/var/log/my_program/foo.%F.log",
                              level => KSM::Logger::VERBOSE,
@@ -85,6 +81,18 @@ our %EXPORT_TAGS = ( 'all' => [qw(
 )]);
 our @EXPORT_OK = (@{$EXPORT_TAGS{'all'}});
 
+=head2 GLOBALS
+
+Some module level global variables are required to manage log state.
+
+=cut
+
+our $FILENAME_OPENED;
+our $FILENAME_TEMPLATE; # = sprintf("/tmp/%s.%%F.log", File::Basename::basename($0));
+our $LEVEL = INFO;
+our $LOG_FILEHANDLE;
+our $REFORMATTER = \&REFORMATTER;
+
 =head1 SUBROUTINES/METHODS
 
 =head2 initialize
@@ -92,7 +100,8 @@ our @EXPORT_OK = (@{$EXPORT_TAGS{'all'}});
 Initializes logging for your application by setting the filename
 template, log level, and the log event reformatter function.
 
-You may leave any or all options 
+You may set or ignore any or all of the options.  Reasonable defaults
+are chosen for the parameters you choose to ignore.
 
 =cut
 
@@ -101,16 +110,16 @@ sub initialize {
     if(defined($options)) {
 	if(ref($options) eq 'HASH') {
 	    if(defined($options->{filename_template})) {
-		KSM::Logger::filename_template($options->{filename_template});
+		filename_template($options->{filename_template});
 	    }
 	    if(defined($options->{level})) {
-		KSM::Logger::level($options->{level});
+		level($options->{level});
 	    }
 	    if(defined($options->{reformatter})) {
-		KSM::Logger::reformatter($options->{reformatter});
+		reformatter($options->{reformatter});
 	    }
 	} else {
-	    croak("ought to pass in an option hash, or nothing");
+	    croak("ought to pass in either option hash, or nothing");
 	}
     }
 }
@@ -138,7 +147,13 @@ returns the log level.
 
 sub level {
     if(scalar(@_)) {
-	$LEVEL = shift;
+	my ($value) = @_;
+	no warnings 'numeric';
+	if($value >= ERROR && $value <= DEBUG) {
+	    $LEVEL = $value;
+	} else {
+	    croak sprintf("unknown level: [%s]", $value);
+	}
     }
     $LEVEL;
 }
@@ -187,7 +202,9 @@ formatted line.
 
 sub reformatter {
     if(scalar(@_)) {
-	$REFORMATTER = shift;
+	my $value = shift;
+	croak("ought to be function") unless ref($value) eq 'CODE';
+	$REFORMATTER = $value;
     }
     $REFORMATTER;
 }
@@ -272,60 +289,6 @@ sub error {
     logit('ERROR', $line);
 }
 
-=head2 log_filename
-
-Internal function that determines what the current log file should be
-used based on the date and time.
-
-=cut
-
-sub log_filename {
-    POSIX::strftime(shift, gmtime);
-}
-
-=head2 log_filehandle
-
-Internal function that ensures the correct log file is used.
-
-If this cannot open a log file and it doesn't already have an open
-file handle, it will die with nowhere to write logs.  If there is an
-open file handle, it will warn the user and continue using the
-existing log file.
-
-=cut
-
-sub log_filehandle {
-    my ($template) = @_;
-    my $need_file = log_filename($template);
-    if(!defined($FILENAME_OPENED) || $need_file ne $FILENAME_OPENED) {
-	local $SIG{__DIE__} = 'DEFAULT';
-	eval {
-	    File::Path::mkpath(File::Basename::dirname($need_file));
-	    open(my $fh, '>>', $need_file)
-		or die sprintf('unable to append [%s]: %s', $need_file, $!);
-	    if(defined($LOG_FILEHANDLE)) {
-		printf $LOG_FILEHANDLE sprintf("INFO: logs continued [%s]\n", 
-					       File::Basename::basename($need_file));
-		close $LOG_FILEHANDLE;
-	    }
-	    $LOG_FILEHANDLE = $fh;
-	    select((select($LOG_FILEHANDLE), $| = 1)[0]); # autoflush
-	    $FILENAME_OPENED = $need_file;
-	};
-	if($@) {
-	    if(defined($LOG_FILEHANDLE)) {
-		# keep writting to old log file, but warn user
-		printf $LOG_FILEHANDLE sprintf("WARNING: unable to create log file: %s\n",
-					       $@);
-	    } else {
-		# FIXME: nowhere to write logs (hours of trouble-shooting if daemonized...)
-		die sprintf("unable to open log for writting [%s]: %s\n", $need_file, $@);
-	    }
-	}
-    }
-    $LOG_FILEHANDLE;
-}
-
 =head2 logit
 
 Internal function that invokes the user's reformatter with the log
@@ -341,17 +304,88 @@ template, it will close and re-open new logs when necessary.
 
 sub logit {
     my ($level,$line) = @_;
-    my $reformatted = &{$REFORMATTER}($level, $line);
+    my $reformatted = &{$REFORMATTER}($level,$line);
     $reformatted =~ s/^\s+//g;
     $reformatted =~ s/\s+$//g;
-    my $fh = log_filehandle(filename_template());
-    printf $fh sprintf("%s\n", $reformatted);
+    my $fh = log_filehandle();
+    printf $fh "%s\n", $reformatted;
     $line;
+}
+
+=head2 log_filehandle
+
+Internal function that ensures the correct log file is used.
+
+If this cannot open a log file and it doesn't already have an open
+file handle, it will die with nowhere to write logs.  If there is an
+open file handle, it will warn the user and continue using the
+existing log file.
+
+=cut
+
+sub log_filehandle {
+    if(defined($FILENAME_TEMPLATE) && $FILENAME_TEMPLATE ne '') {
+	change_log_to_file();
+    } else {
+	change_log_to_standard_error();
+    }
+}
+
+=head2 change_log_to_standard_error
+
+Internal function called when filename_template is undefined or the
+empty string.
+
+=cut
+
+sub change_log_to_standard_error {
+    open $LOG_FILEHANDLE,'>&STDERR' or die "Cannot dup stderr: $!";
+    undef $FILENAME_OPENED;
+    $LOG_FILEHANDLE;
+}
+
+=head2 change_log_to_file
+
+Internal function called when filename_template is a valid string.
+
+=cut
+
+sub change_log_to_file {
+    my $want_file = POSIX::strftime($FILENAME_TEMPLATE, gmtime);
+    if(!defined($FILENAME_OPENED) || $want_file ne $FILENAME_OPENED) {
+	eval {
+	    File::Path::mkpath(File::Basename::dirname($want_file));
+	    open(my $fh, '>>', $want_file)
+		or die "unable to append [$want_file]: $!";
+	    if(defined($LOG_FILEHANDLE)) {
+		printf $LOG_FILEHANDLE "INFO: logs continued [$want_file]\n";
+		close $LOG_FILEHANDLE;
+	    }
+	    $LOG_FILEHANDLE = $fh;
+	    select((select($LOG_FILEHANDLE), $| = 1)[0]); # autoflush
+	    $FILENAME_OPENED = $want_file;
+	};
+	if($@) {
+	    if(defined($LOG_FILEHANDLE)) {
+		printf $LOG_FILEHANDLE "WARNING: unable to create new log file [$want_file]: $@\n";
+	    } else {
+		# FIXME: nowhere to write logs (hours of trouble-shooting if daemonized...)
+		die "nowhere to write logs: $@";
+	    }
+	}		
+    }
+    $LOG_FILEHANDLE;
 }
 
 =head1 AUTHOR
 
 Karrick S. McDermott, C<< <karrick at karrick.net> >>
+
+=head1 TODO
+
+* Better error checking on options to &level and &filename_template
+  functions.
+
 
 =head1 BUGS
 

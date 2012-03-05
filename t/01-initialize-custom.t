@@ -1,10 +1,10 @@
 #!/usr/bin/env perl
 
 use utf8;
+use diagnostics;
 use strict;
 use warnings;
 use Carp;
-
 use Test::More;
 use Test::Class;
 use base qw(Test::Class);
@@ -12,22 +12,29 @@ END { Test::Class->runtests }
 
 ########################################
 
+use File::Temp ();
 use KSM::Logger qw(:all);
+
+########################################
+
+sub create_temp_file : Tests(setup) {
+    my ($self) = @_;
+    ($self->{fh},$self->{fname}) = File::Temp::tempfile(); 
+}
+
+sub remove_temp_file : Tests(teardown) {
+    my ($self) = @_;
+    unlink($self->{fname});
+}
 
 ########################################
 # initialize
 
 sub test_initialize_accepts_custom_options : Tests {
-    KSM::Logger::initialize({filename_template => "log/foobarbaz/foo.%F.log",
-			     level => KSM::Logger::WARNING});
-    is(KSM::Logger::filename_template(), "log/foobarbaz/foo.%F.log");
-    is(KSM::Logger::level(), KSM::Logger::WARNING);
-}
-
-sub test_dies_when_unable_to_open_log_file : Tests {
-    eval {
-	KSM::Logger::initialize({filename_template => "/var/log/foo.log"});
-	info("must log something to force open of log file");
-    };
-    like($@, qr/^unable to open log for writting/);
+    my ($self) = @_;
+    KSM::Logger::initialize({filename_template => $self->{fname},
+			     level => KSM::Logger::VERBOSE});
+    info("must output something to force opening of log file");
+    is($KSM::Logger::FILENAME_OPENED, $self->{fname});
+    is($KSM::Logger::LEVEL, KSM::Logger::VERBOSE);
 }

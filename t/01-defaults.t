@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
 
 use utf8;
+use diagnostics;
 use strict;
 use warnings;
-
+use Carp;
 use Test::More;
 use Test::Class;
 use base qw(Test::Class);
@@ -15,14 +16,15 @@ use KSM::Logger qw(:all);
 
 ########################################
 
-sub save_defaults : Tests(setup) {
+sub save_defaults : Tests(startup) {
     my ($self) = @_;
+    KSM::Logger::initialize();
     $self->{filename_template} = KSM::Logger::filename_template();
     $self->{level} = KSM::Logger::level();
     $self->{reformatter} = KSM::Logger::reformatter();
 }
 
-sub restore_reformatter : Tests(teardown) {
+sub restore_reformatter : Tests(setup) {
     my ($self) = @_;
     KSM::Logger::filename_template($self->{filename_template});
     KSM::Logger::level($self->{level});

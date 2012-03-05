@@ -8,10 +8,9 @@ lib/KSM/Logger.pm
 t/00-load.t
 t/01-defaults.t
 t/01-initialize-custom.t
-t/01-initialize-defaults.t
 t/02-calling-sprintf-and-reformatter.t
+t/02-level.t
 t/03-severity-levels.t
-t/04-log-files.t
 t/boilerplate.t
 t/manifest.t
 t/pod-coverage.t

@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
 
 use utf8;
+use diagnostics;
 use strict;
 use warnings;
-
+use Carp;
 use Test::More;
 use Test::Class;
 use base qw(Test::Class);
@@ -11,27 +12,38 @@ END { Test::Class->runtests }
 
 ########################################
 
+use File::Temp;
 use KSM::Logger qw(:all);
 
 ########################################
 
-sub save_defaults : Tests(setup) {
+sub setup_logging : Tests(setup) {
     my ($self) = @_;
-    $self->{filename_template} = KSM::Logger::filename_template();
-    $self->{level} = KSM::Logger::level();
-    $self->{reformatter} = KSM::Logger::reformatter();
+    
+    ($self->{fh},$self->{fname}) = File::Temp::tempfile(); 
+    KSM::Logger::initialize({
+	filename_template => $self->{fname},
+	level => KSM::Logger::INFO});
 }
 
-sub restore_reformatter : Tests(teardown) {
+sub remove_temp_file : Tests(teardown) {
     my ($self) = @_;
-    KSM::Logger::filename_template($self->{filename_template});
-    KSM::Logger::level($self->{level});
-    KSM::Logger::reformatter($self->{reformatter});
+    unlink($self->{fname});
+}
+
+########################################
+
+sub file_contents {
+    my ($filename) = @_;
+    local $/;
+    open(FH, '<', $filename) or croak("unable to open file [$filename]: $!");
+    <FH>;
 }
 
 ########################################
 
 sub test_debug_level_shows_all : Tests {
+    my ($self) = @_;
     my $reformatter_invoked;
     my $mock_reformatter = sub {
 	my ($level,$line) = @_;
@@ -41,28 +53,36 @@ sub test_debug_level_shows_all : Tests {
     KSM::Logger::level(KSM::Logger::DEBUG);
     KSM::Logger::reformatter($mock_reformatter);
 
-    debug("debug debug");
+    debug("call debug when level debug");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    verbose("debug verbose");
+    verbose("call verbose when level debug");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    info("debug info");
+    info("call info when level debug");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    warning("debug warning");
+    warning("call warning when level debug");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    error("debug error");
+    error("call error when level debug");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
+
+    my $contents = file_contents($self->{fname});
+    like($contents, qr|DEBUG|);
+    like($contents, qr|VERBOSE|);
+    like($contents, qr|INFO|);
+    like($contents, qr|WARNING|);
+    like($contents, qr|ERROR|);
 }
 
 sub test_verbose_level_hides_debug : Tests {
+    my ($self) = @_;
     my $reformatter_invoked;
     my $mock_reformatter = sub {
 	my ($level,$line) = @_;
@@ -72,28 +92,36 @@ sub test_verbose_level_hides_debug : Tests {
     KSM::Logger::level(KSM::Logger::VERBOSE);
     KSM::Logger::reformatter($mock_reformatter);
 
-    debug("verbose debug hidden");
+    debug("debug called when level verbose hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    verbose("verbose verbose");
+    verbose("verbose called when level verbose");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    info("verbose info");
+    info("info called when level verbose");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    warning("verbose warning");
+    warning("warning called when level verbose");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    error("verbose error");
+    error("error called when level verbose");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
+
+    my $contents = file_contents($self->{fname});
+    unlike($contents, qr|hidden|);
+    like($contents, qr|VERBOSE|);
+    like($contents, qr|INFO|);
+    like($contents, qr|WARNING|);
+    like($contents, qr|ERROR|);
 }
 
 sub test_info_level_hides_debug_and_verbose : Tests {
+    my ($self) = @_;
     my $reformatter_invoked;
     my $mock_reformatter = sub {
 	my ($level,$line) = @_;
@@ -102,28 +130,35 @@ sub test_info_level_hides_debug_and_verbose : Tests {
     };
     KSM::Logger::reformatter($mock_reformatter);
 
-    debug("info debug hidden");
+    debug("debug called when level info hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    verbose("info verbose hidden");
+    verbose("verbose called when level info hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    info("info info");
+    info("info called when level info");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    warning("info warning");
+    warning("warning called when level info");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    error("info error");
+    error("error called when level info");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
+
+    my $contents = file_contents($self->{fname});
+    unlike($contents, qr|hidden|);
+    like($contents, qr|INFO|);
+    like($contents, qr|WARNING|);
+    like($contents, qr|ERROR|);
 }
 
 sub test_warning_level_hides_debug_info_and_info : Tests {
+    my ($self) = @_;
     my $reformatter_invoked;
     my $mock_reformatter = sub {
 	my ($level,$line) = @_;
@@ -133,28 +168,34 @@ sub test_warning_level_hides_debug_info_and_info : Tests {
     KSM::Logger::level(KSM::Logger::WARNING);
     KSM::Logger::reformatter($mock_reformatter);
 
-    debug("warning debug hidden");
+    debug("debug called when level warning hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    verbose("warning verbose hidden");
+    verbose("verbose called when level warning hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    info("warning info hidden");
+    info("info called when level warning hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    warning("warning warning");
+    warning("warning called when level warning");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
 
-    error("warning error");
+    error("error called when level warning");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
+
+    my $contents = file_contents($self->{fname});
+    unlike($contents, qr|hidden|);
+    like($contents, qr|WARNING|);
+    like($contents, qr|ERROR|);
 }
 
 sub test_error_level_hides_all_but_error : Tests {
+    my ($self) = @_;
     my $reformatter_invoked;
     my $mock_reformatter = sub {
 	my ($level,$line) = @_;
@@ -164,23 +205,27 @@ sub test_error_level_hides_all_but_error : Tests {
     KSM::Logger::level(KSM::Logger::ERROR);
     KSM::Logger::reformatter($mock_reformatter);
 
-    debug("error debug hidden");
+    debug("debug called when level error hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    verbose("error verbose hidden");
+    verbose("verbose called when level error hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    info("error info hidden");
+    info("info called when level error hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    warning("error warning hidden");
+    warning("warning called when level error hidden");
     ok(!$reformatter_invoked);
     $reformatter_invoked = 0;
 
-    error("error error");
+    error("error called when level error");
     ok($reformatter_invoked);
     $reformatter_invoked = 0;
+
+    my $contents = file_contents($self->{fname});
+    unlike($contents, qr|hidden|);
+    like($contents, qr|ERROR|);
 }

@@ -21,11 +21,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 1.00
+Version 1.02
 
 =cut
 
-our $VERSION = '1.00';
+our $VERSION = '1.02';
 
 =head1 SYNOPSIS
 
@@ -88,7 +88,7 @@ Some module level global variables are required to manage log state.
 =cut
 
 our $FILENAME_OPENED;
-our $FILENAME_TEMPLATE; # = sprintf("/tmp/%s.%%F.log", File::Basename::basename($0));
+our $FILENAME_TEMPLATE;
 our $LEVEL = INFO;
 our $LOG_FILEHANDLE;
 our $REFORMATTER = \&REFORMATTER;
@@ -119,7 +119,7 @@ sub initialize {
 		reformatter($options->{reformatter});
 	    }
 	} else {
-	    croak("ought to pass in either option hash, or nothing");
+	    croak("ought to pass in either option hash, or nothing\n");
 	}
     }
 }
@@ -152,7 +152,7 @@ sub level {
 	if($value >= ERROR && $value <= DEBUG) {
 	    $LEVEL = $value;
 	} else {
-	    croak sprintf("unknown level: [%s]", $value);
+	    croak sprintf("unknown level: [%s]\n", $value);
 	}
     }
     $LEVEL;
@@ -203,7 +203,7 @@ formatted line.
 sub reformatter {
     if(scalar(@_)) {
 	my $value = shift;
-	croak("ought to be function") unless ref($value) eq 'CODE';
+	croak("ought to be function\n") if(ref($value) ne 'CODE');
 	$REFORMATTER = $value;
     }
     $REFORMATTER;
@@ -339,7 +339,7 @@ empty string.
 =cut
 
 sub change_log_to_standard_error {
-    open $LOG_FILEHANDLE,'>&STDERR' or die "Cannot dup stderr: $!";
+    open($LOG_FILEHANDLE,'>&STDERR') or die sprintf("Cannot dup stderr: %s\n", $!);
     undef $FILENAME_OPENED;
     $LOG_FILEHANDLE;
 }
@@ -356,7 +356,7 @@ sub change_log_to_file {
 	eval {
 	    File::Path::mkpath(File::Basename::dirname($want_file));
 	    open(my $fh, '>>', $want_file)
-		or die "unable to append [$want_file]: $!";
+		or die sprintf("unable to append [%s]: %s\n", $want_file, $!);
 	    if(defined($LOG_FILEHANDLE)) {
 		printf $LOG_FILEHANDLE "INFO: logs continued [$want_file]\n";
 		close $LOG_FILEHANDLE;
@@ -367,10 +367,10 @@ sub change_log_to_file {
 	};
 	if($@) {
 	    if(defined($LOG_FILEHANDLE)) {
-		printf $LOG_FILEHANDLE "WARNING: unable to create new log file [$want_file]: $@\n";
+		printf $LOG_FILEHANDLE "WARNING: unable to create new log file [%s]: %s\n", $want_file, $@;
 	    } else {
 		# FIXME: nowhere to write logs (hours of trouble-shooting if daemonized...)
-		die "nowhere to write logs: $@";
+		die sprintf("nowhere to write logs: %s\n", $@);
 	    }
 	}		
     }

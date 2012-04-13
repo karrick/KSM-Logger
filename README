@@ -1,15 +1,9 @@
 KSM-Logger
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
-
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+KSM::Logger provides an abstracted view of your program's logging
+needs.  It has multiple logging levels, automatically rolls logs based
+on a filename template you provide, and can optionally invoke a
+reformatter function you provide for each log event.
 
 
 INSTALLATION
@@ -28,19 +22,6 @@ perldoc command.
 
     perldoc KSM::Logger
 
-You can also look for information at:
-
-    RT, CPAN's request tracker
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=KSM-Logger
-
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/KSM-Logger
-
-    CPAN Ratings
-        http://cpanratings.perl.org/d/KSM-Logger
-
-    Search CPAN
-        http://search.cpan.org/dist/KSM-Logger/
 
 
 LICENSE AND COPYRIGHT

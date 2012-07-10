@@ -12,6 +12,7 @@ END { Test::Class->runtests }
 
 ########################################
 
+use Capture::Tiny qw(capture);
 use File::Temp;
 use KSM::Logger qw(:all);
 
@@ -43,5 +44,7 @@ sub file_contents {
 ########################################
 
 sub test_logit_returns_finished_line : Tests {
-    like(info("Hello, World!"), qr|^Hello, World!$|);
+    my ($stdout,$stderr,@result) = capture {
+	like(info("Hello, %s!", "World"), qr|^Hello, World!$|);
+    };
 }

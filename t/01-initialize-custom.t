@@ -12,8 +12,19 @@ END { Test::Class->runtests }
 
 ########################################
 
-use File::Temp ();
+use Capture::Tiny qw(capture);
+use File::Temp;
 use KSM::Logger qw(:all);
+
+########################################
+
+sub file_contents {
+    my ($filename) = @_;
+    local $/;
+    open(FH, '<', $filename)
+	or croak sprintf("unable to open file %s: %s", $filename, $!);
+    <FH>;
+}
 
 ########################################
 
@@ -34,7 +45,11 @@ sub test_initialize_accepts_custom_options : Tests {
     my ($self) = @_;
     KSM::Logger::initialize({filename_template => $self->{fname},
 			     level => KSM::Logger::VERBOSE});
-    info("must output something to force opening of log file");
+
+    my ($stdout,$stderr,@result) = capture {
+	info("must output something to force opening of log file");
+    };
+
     is($KSM::Logger::FILENAME_OPENED, $self->{fname});
     is($KSM::Logger::LEVEL, KSM::Logger::VERBOSE);
 }

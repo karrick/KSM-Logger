@@ -21,11 +21,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 1.02
+Version 1.03
 
 =cut
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 =head1 SYNOPSIS
 
@@ -162,6 +162,9 @@ sub level {
 
 Use the &filename_template function to change the format of the
 filename, including its path.
+
+KSM::Logger will always send output to STDERR, and optionally send
+output to a log file if given a filename template.
 
 KSM::Logger will attempt to create the required directories on the
 path when opening a log file.
@@ -307,8 +310,13 @@ sub logit {
     my $reformatted = &{$REFORMATTER}($level,$line);
     $reformatted =~ s/^\s+//g;
     $reformatted =~ s/\s+$//g;
-    my $fh = log_filehandle();
-    printf $fh "%s\n", $reformatted;
+
+    printf STDERR "%s\n", $reformatted;
+
+    if(defined($FILENAME_TEMPLATE) && $FILENAME_TEMPLATE ne '') {
+	my $fh = log_filehandle();
+	printf $fh "%s\n", $reformatted;
+    }
     $line;
 }
 
@@ -324,33 +332,6 @@ existing log file.
 =cut
 
 sub log_filehandle {
-    if(defined($FILENAME_TEMPLATE) && $FILENAME_TEMPLATE ne '') {
-	change_log_to_file();
-    } else {
-	change_log_to_standard_error();
-    }
-}
-
-=head2 change_log_to_standard_error
-
-Internal function called when filename_template is undefined or the
-empty string.
-
-=cut
-
-sub change_log_to_standard_error {
-    open($LOG_FILEHANDLE,'>&STDERR') or die sprintf("Cannot dup stderr: %s\n", $!);
-    undef $FILENAME_OPENED;
-    $LOG_FILEHANDLE;
-}
-
-=head2 change_log_to_file
-
-Internal function called when filename_template is a valid string.
-
-=cut
-
-sub change_log_to_file {
     my $want_file = POSIX::strftime($FILENAME_TEMPLATE, gmtime);
     if(!defined($FILENAME_OPENED) || $want_file ne $FILENAME_OPENED) {
 	eval {

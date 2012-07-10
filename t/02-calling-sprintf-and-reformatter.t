@@ -12,6 +12,7 @@ END { Test::Class->runtests }
 
 ########################################
 
+use Capture::Tiny qw(capture);
 use KSM::Logger qw(:all);
 
 ########################################
@@ -91,9 +92,11 @@ sub simple_reformatter {
 sub test_prepare_line_invokes_sprintf : Tests {
     my $log = with_captured_log(
 	sub {
-	    is(debug("Is %s called?", "sprintf"),
-	       "Is sprintf called?",
-	       "should return string returned by sprintf w/o calling REFORMATTER");
+	    my ($stdout,$stderr,@result) = capture {
+		is(debug("Is %s called?", "sprintf"),
+		   "Is sprintf called?",
+		   "should return string returned by sprintf w/o calling REFORMATTER");
+	    };
 	});
     like($log, qr/\(1999\) DEBUG: Is sprintf called\?/);
 }
@@ -102,11 +105,13 @@ sub test_prepare_line_invokes_reformatter : Tests {
 
     my $log = with_captured_log(
 	sub {
-	    debug("Now is the time");
-	    verbose("for all good men");
-	    info("to come to the");
-	    warning("aid of");
-	    error("their country");
+	    my ($stdout,$stderr,@result) = capture {
+		debug("Now is the time");
+		verbose("for all good men");
+		info("to come to the");
+		warning("aid of");
+		error("their country");
+	    };
 	});
     like($log, qr/\(1999\) DEBUG: Now is the time/);
     like($log, qr/\(2499\) VERBOSE: for all good men/);

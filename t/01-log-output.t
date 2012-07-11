@@ -47,18 +47,18 @@ sub remove_temp_file : Tests(teardown) {
 sub test_logs_to_stderr_when_undef_filename_template : Tests {
     my ($stdout,$stderr,@result) = capture {
 	KSM::Logger::filename_template(undef);
-	info("line 1 to standard error");
+	info("line 1");
     };
-    like($stderr, qr|line 1 to standard error|);
+    like($stderr, qr|line 1|);
     is($stdout, "");
 }
 
 sub test_logs_to_stderr_when_empty_filename_template : Tests {
     my ($stdout,$stderr,@result) = capture {
 	KSM::Logger::filename_template('');
-	info("line 1 to standard error");
+	info("line 2");
     };
-    like($stderr, qr|line 1 to standard error|);
+    like($stderr, qr|line 2|);
     is($stdout, "");
 }
 
@@ -68,10 +68,10 @@ sub test_logs_to_filename_if_given : Tests {
 
     ($stdout,$stderr,@result) = capture {
 	KSM::Logger::filename_template($self->{fname});	
-	info("line 3 to stderr and temp log file");
+	info("line 3");
     };
     like(file_contents($self->{fname}),
-	 qr|\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d .*\] \d+ INFO: \(pid \d+\) line 3 to stderr and temp log file|);
+	 qr|\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d .*\] \d+ INFO: \(pid \d+\) line 3|);
 }
 
 sub test_can_change_logs_back_and_forth : Tests {
@@ -84,28 +84,28 @@ sub test_can_change_logs_back_and_forth : Tests {
 
     # ($stdout,$stderr,@result) = capture {
     # 	KSM::Logger::filename_template(undef);
-    # 	info("line 1 to stderr");
+    # 	info("line 1");
     # };
-    # like($stderr, qr|line 1 to stderr|);
+    # like($stderr, qr|line 1|);
 
     ($stdout,$stderr,@result) = capture {
 	KSM::Logger::filename_template($self->{fname});
-	info("line 2 to stderr and log file");
+	info("line 2");
     };
-    like($stderr, qr|line 2 to stderr and log file|);
-    like(file_contents($self->{fname}), qr|INFO: \(pid \d+\) line 2 to stderr and log file|);
+    unlike($stderr, qr|line 2|);
+    like(file_contents($self->{fname}), qr|INFO: \(pid \d+\) line 2|);
 
     ($stdout,$stderr,@result) = capture {
 	KSM::Logger::filename_template(undef);
-	info("line 3 to stderr only");
+	info("line 3");
     };
-    like($stderr, qr|line 3 to stderr only|);
-    unlike(file_contents($self->{fname}), qr|INFO: \(pid \d+\) line 3 to stderr only|);
+    like($stderr, qr|line 3|);
+    unlike(file_contents($self->{fname}), qr|INFO: \(pid \d+\) line 3|);
     
     ($stdout,$stderr,@result) = capture {
 	KSM::Logger::filename_template($self->{fname});
-	info("line 4 to stderr and log file");
+	info("line 4");
     };
-    like($stderr, qr|line 4 to stderr and log file|);
-    like(file_contents($self->{fname}), qr|INFO: \(pid \d+\) line 4 to stderr and log file|);
+    unlike($stderr, qr|line 4|);
+    like(file_contents($self->{fname}), qr|INFO: \(pid \d+\) line 4|);
 }

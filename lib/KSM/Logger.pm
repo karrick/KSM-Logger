@@ -21,11 +21,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 1.03
+Version 1.04
 
 =cut
 
-our $VERSION = '1.03';
+our $VERSION = '1.04';
 
 =head1 SYNOPSIS
 
@@ -55,8 +55,7 @@ Perhaps a little code snippet.
         if(! -r $config_file) {
             # NOTE: logging functions return finished log line,
             # so you can pass them on to die, warn, carp, and croak:
-            croak error("config file not found: %s",
-                        $config_file);
+            croak error("config file not found: %s", $config_file);
         }
         ...
     };
@@ -108,18 +107,17 @@ are chosen for the parameters you choose to ignore.
 sub initialize {
     my ($options) = @_;
     if(defined($options)) {
-	if(ref($options) eq 'HASH') {
-	    if(defined($options->{filename_template})) {
-		filename_template($options->{filename_template});
-	    }
-	    if(defined($options->{level})) {
-		level($options->{level});
-	    }
-	    if(defined($options->{reformatter})) {
-		reformatter($options->{reformatter});
-	    }
-	} else {
+	if(ref($options) ne 'HASH') {
 	    croak("ought to pass in either option hash, or nothing\n");
+	}
+	if(defined($options->{filename_template})) {
+	    filename_template($options->{filename_template});
+	}
+	if(defined($options->{level})) {
+	    level($options->{level});
+	}
+	if(defined($options->{reformatter})) {
+	    reformatter($options->{reformatter});
 	}
     }
 }
@@ -134,8 +132,7 @@ the severity level string, and the process PID.
 sub REFORMATTER {
     my ($level,$line) = @_;
     sprintf("%s %s: (pid %d) %s",
- 	    POSIX::strftime("[%F %T %Z] %s", gmtime),
-	    $level, $$, $line);
+ 	    POSIX::strftime("[%F %T %Z] %s", gmtime), $level, $$, $line);
 }
 
 =head2 level
@@ -163,19 +160,15 @@ sub level {
 Use the &filename_template function to change the format of the
 filename, including its path.
 
-KSM::Logger will always send output to STDERR, and optionally send
-output to a log file if given a filename template.
-
-KSM::Logger will attempt to create the required directories on the
-path when opening a log file.
+By default KSM::Logger will send output to STDERR, however given a
+filename template it will attempt to send output to the specified log
+file.  It will attempt to create the required directories on the path
+when opening a log file.
 
 The template will be passed through &strftime, so you can include
-codes from strftime(3), as the default value shows below, to partition
-your logs based on time.  You can place strftime codes in both the
-path and filename portion of the template.
-
-If not explicitly set, the filename template will be set to
-"/tmp/$0.%F.log", where $0 is the basename of your program.
+formatting codes from strftime(3), as the default value shows below,
+to partition your logs based on time.  You can place strftime codes in
+both the path and filename portion of the template.
 
 Note that when Logger needs to roll logs, it will use the same
 template that you gave it before.  If your program is daemonized, its
@@ -307,15 +300,16 @@ template, it will close and re-open new logs when necessary.
 
 sub logit {
     my ($level,$line) = @_;
+
     my $reformatted = &{$REFORMATTER}($level,$line);
     $reformatted =~ s/^\s+//g;
     $reformatted =~ s/\s+$//g;
 
-    printf STDERR "%s\n", $reformatted;
-
     if(defined($FILENAME_TEMPLATE) && $FILENAME_TEMPLATE ne '') {
 	my $fh = log_filehandle();
 	printf $fh "%s\n", $reformatted;
+    } else {
+	printf STDERR "%s\n", $reformatted;
     }
     $line;
 }
@@ -346,12 +340,13 @@ sub log_filehandle {
 	    select((select($LOG_FILEHANDLE), $| = 1)[0]); # autoflush
 	    $FILENAME_OPENED = $want_file;
 	};
-	if($@) {
+	my $status = $@;
+	if($status) {
 	    if(defined($LOG_FILEHANDLE)) {
-		printf $LOG_FILEHANDLE "WARNING: unable to create new log file [%s]: %s\n", $want_file, $@;
+		printf $LOG_FILEHANDLE "WARNING: unable to create new log file [%s]: %s\n", $want_file, $status;
 	    } else {
 		# FIXME: nowhere to write logs (hours of trouble-shooting if daemonized...)
-		die sprintf("nowhere to write logs: %s\n", $@);
+		die sprintf("unable to create new log file [%s]: %s\n", $want_file, $status);
 	    }
 	}		
     }

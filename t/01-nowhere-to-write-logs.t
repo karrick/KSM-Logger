@@ -22,9 +22,9 @@ sub test_dies_when_unable_to_open_log_file : Tests {
     my ($stdout,$stderr,@result) = capture {
 	eval {
 	    KSM::Logger::initialize({filename_template => "/root/log/foo.log"});
-	    info("must log something to force open of log file");
+	    info("attempting to log something will attempt to open log file");
 	};
-	like($@, qr|^nowhere to write logs|);
+	like($@, qr|^unable to create new log file .* Permission denied|);
     };
-    like($stderr, qr|must log something to force open of log file|);
+    is($stderr, '');
 }

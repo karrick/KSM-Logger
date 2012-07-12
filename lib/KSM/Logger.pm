@@ -21,11 +21,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =cut
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 =head1 SYNOPSIS
 
@@ -106,6 +106,7 @@ are chosen for the parameters you choose to ignore.
 
 sub initialize {
     my ($options) = @_;
+    binmode STDERR, ":utf8";
     if(defined($options)) {
 	if(ref($options) ne 'HASH') {
 	    croak("ought to pass in either option hash, or nothing\n");
@@ -330,8 +331,7 @@ sub log_filehandle {
     if(!defined($FILENAME_OPENED) || $want_file ne $FILENAME_OPENED) {
 	eval {
 	    File::Path::mkpath(File::Basename::dirname($want_file));
-	    open(my $fh, '>>', $want_file)
-		or die sprintf("unable to append [%s]: %s\n", $want_file, $!);
+	    open(my $fh,">>:encoding(UTF-8)",$want_file) or die sprintf("%s\n", $!);
 	    if(defined($LOG_FILEHANDLE)) {
 		printf $LOG_FILEHANDLE "INFO: logs continued [$want_file]\n";
 		close $LOG_FILEHANDLE;

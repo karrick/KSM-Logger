@@ -21,11 +21,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 1.05
+Version 1.06
 
 =cut
 
-our $VERSION = '1.05';
+our $VERSION = '1.06';
 
 =head1 SYNOPSIS
 
@@ -217,9 +217,11 @@ REFORMATTER function.
 
 sub debug {
     my $template = shift;
-    my $line = eval {sprintf($template, @_)};
-    croak($@) if($@);
-    ($LEVEL == DEBUG ? logit('DEBUG', $line) : $line);
+    if($LEVEL == DEBUG || defined(wantarray())) {
+	my $line = eval {sprintf($template, @_)};
+	croak($@) if($@);
+	($LEVEL == DEBUG ? logit('DEBUG', $line) : $line);
+    }
 }
 
 =head2 verbose
@@ -233,9 +235,11 @@ REFORMATTER function.
 
 sub verbose {
     my $template = shift;
-    my $line = eval {sprintf($template, @_)};
-    croak($@) if($@);
-    ($LEVEL >= VERBOSE ? logit('VERBOSE', $line) : $line);
+    if($LEVEL >= VERBOSE || defined(wantarray())) {
+	my $line = eval {sprintf($template, @_)};
+	croak($@) if($@);
+	($LEVEL >= VERBOSE ? logit('VERBOSE', $line) : $line);
+    }
 }
 
 =head2 info
@@ -249,9 +253,11 @@ REFORMATTER function.
 
 sub info {
     my $template = shift;
-    my $line = eval {sprintf($template, @_)};
-    croak($@) if($@);
-    ($LEVEL >= INFO ? logit('INFO', $line) : $line);
+    if($LEVEL >= INFO || defined(wantarray())) {
+	my $line = eval {sprintf($template, @_)};
+	croak($@) if($@);
+	($LEVEL >= INFO ? logit('INFO', $line) : $line);
+    }
 }
 
 =head2 warning
@@ -265,9 +271,11 @@ REFORMATTER function.
 
 sub warning {
     my $template = shift;
-    my $line = eval {sprintf($template, @_)};
-    croak($@) if($@);
-    ($LEVEL >= WARNING ? logit('WARNING', $line) : $line);
+    if($LEVEL >= WARNING || defined(wantarray())) {
+	my $line = eval {sprintf($template, @_)};
+	croak($@) if($@);
+	($LEVEL >= WARNING ? logit('WARNING', $line) : $line);
+    }
 }
 
 =head2 error

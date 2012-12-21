@@ -25,7 +25,7 @@ Version 1.06
 
 =cut
 
-our $VERSION = '1.06';
+our $VERSION = '1.07';
 
 =head1 SYNOPSIS
 
@@ -133,7 +133,8 @@ the severity level string, and the process PID.
 sub REFORMATTER {
     my ($level,$line) = @_;
     sprintf("%s %s: (pid %d) %s",
- 	    POSIX::strftime("[%F %T %Z] %s", gmtime), $level, $$, $line);
+ 	    POSIX::strftime("[%F %T %Z] %s", 
+			    localtime()), $level, $$, $line);
 }
 
 =head2 level

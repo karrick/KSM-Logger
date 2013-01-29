@@ -21,11 +21,11 @@ KSM::Logger - The great new KSM::Logger!
 
 =head1 VERSION
 
-Version 1.06
+Version 2.0.0
 
 =cut
 
-our $VERSION = '1.07';
+our $VERSION = '2.0.0';
 
 =head1 SYNOPSIS
 

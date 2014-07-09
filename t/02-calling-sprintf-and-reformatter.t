@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Carp;
 
+use File::Temp qw(tempfile);
 use Test::More;
 use Test::Class;
 use base qw(Test::Class);
@@ -28,10 +29,10 @@ sub with_temp {
     if(ref($function) ne 'CODE') {
     	croak("first argument to with_temp ought to be a function");
     }
-    chomp(my $temp = `mktemp`);
-    my $result = eval {&{$function}($temp)};
+    my ($fh, $filename) = tempfile();
+    my $result = eval {&{$function}($filename)};
     my $status = $@;
-    unlink($temp) if -e $temp;
+    unlink($filename) if -e $filename;
     if($status) {croak $status}
     $result;
 }

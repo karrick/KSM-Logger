@@ -1,4 +1,6 @@
 KSM-Logger-*.tar.gz
+MYMETA.json
+MYMETA.yml
 Makefile
 blib/
 log/
